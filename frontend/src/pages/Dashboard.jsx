@@ -1,54 +1,48 @@
-export default function Dashboard() {
-  const stats = [
-    {
-      title: 'Total Vehicles',
-      value: '48',
-      change: '+6%',
-      icon: '🚚',
-    },
-    {
-      title: 'Active Trips',
-      value: '16',
-      change: '+12%',
-      icon: '📦',
-    },
-    {
-      title: 'Delivered Orders',
-      value: '128',
-      change: '+18%',
-      icon: '✅',
-    },
-    {
-      title: 'Drivers Available',
-      value: '22',
-      change: '+4%',
-      icon: '👨‍✈️',
-    },
-  ];
+import  { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import API from '../services/api';
 
-  const trips = [
-    {
-      tripId: 'TRIP-482931',
-      vehicle: 'MP09AB1234',
-      driver: 'Rahul Sharma',
-      destination: 'Indore',
-      status: 'In Transit',
-    },
-    {
-      tripId: 'TRIP-482845',
-      vehicle: 'MP04XY8891',
-      driver: 'Ankit Verma',
-      destination: 'Bhopal',
-      status: 'Pending',
-    },
-    {
-      tripId: 'TRIP-482701',
-      vehicle: 'MP13CD4521',
-      driver: 'Rohit Singh',
-      destination: 'Nagpur',
-      status: 'Delivered',
-    },
-  ];
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const [trips, setTrips] = useState([]);
+  const [metrics, setMetrics] = useState({
+    totalVehicles: 0,
+    activeTrips: 0,
+    deliveredOrders: 0,
+    driversAvailable: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const [vehiclesRes, tripsRes, driversRes] = await Promise.all([
+          API.get('/vehicles'),
+          API.get('/trips'),
+          API.get('/drivers')
+        ]);
+
+        const allVehicles = vehiclesRes.data.data || [];
+        const allTrips = tripsRes.data.data || [];
+        const allDrivers = driversRes.data.data || [];
+
+        setTrips(allTrips.slice(0, 5)); 
+        
+        setMetrics({
+          totalVehicles: allVehicles.length,
+          activeTrips: allTrips.filter(t => t.status === 'In Transit').length,
+          deliveredOrders: allTrips.filter(t => t.status === 'Delivered').length,
+          driversAvailable: allDrivers.filter(d => d.status === 'Available').length
+        });
+      } catch (err) {
+        console.error("Error connecting dashboard to logistics pipeline:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -61,164 +55,98 @@ export default function Dashboard() {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 text-slate-600 font-medium">
+        Loading real-time fleet yard metrics...
+      </div>
+    );
+  }
+
+  const statsConfig = [
+    { title: 'Total Fleet Vehicles', value: metrics.totalVehicles, icon: '🚚', change: 'Live' },
+    { title: 'Active Transits', value: metrics.activeTrips, icon: '📦', change: 'In Route' },
+    { title: 'Completed Deliveries', value: metrics.deliveredOrders, icon: '✅', change: 'Archived' },
+    { title: 'Operators Available', value: metrics.driversAvailable, icon: '👨‍✈️', change: 'On Standby' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <aside className="hidden md:flex w-64 flex-col bg-white border-r border-gray-200 p-6">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-gray-800">Fleetora</h1>
-          <p className="text-sm text-gray-500 mt-2">
-            Manufacturing Transport System
-          </p>
+    <div className="flex-1 overflow-y-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <div>
+          <h2 className="text-3xl font-bold text-gray-800">Transport Dashboard</h2>
+          <p className="text-gray-500 mt-1">Monitor production line outputs, delivery fulfillment, and live asset allocations.</p>
         </div>
+        <button 
+          onClick={() => navigate('/dispatch')}
+          className="bg-black text-white px-5 py-3 rounded-xl font-medium shadow hover:opacity-90 transition text-center"
+        >
+          + Create Manifest Dispatch
+        </button>
+      </div>
 
-        <nav className="space-y-3">
-          <button className="w-full text-left px-4 py-3 rounded-xl bg-black text-white font-medium shadow-sm">
-            Dashboard
-          </button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
+        {statsConfig.map((item, index) => (
+          <div key={index} className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition">
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-3xl">{item.icon}</span>
+              <span className="text-xs font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-md">{item.change}</span>
+            </div>
+            <h3 className="text-gray-500 text-sm font-medium">{item.title}</h3>
+            <p className="text-3xl font-bold text-gray-800 mt-2">{item.value}</p>
+          </div>
+        ))}
+      </div>
 
-          <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-100 text-gray-700 font-medium transition">
-            Vehicles
-          </button>
-
-          <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-100 text-gray-700 font-medium transition">
-            Drivers
-          </button>
-
-          <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-100 text-gray-700 font-medium transition">
-            Trips
-          </button>
-
-          <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-gray-100 text-gray-700 font-medium transition">
-            Analytics
-          </button>
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-6 lg:p-8 overflow-y-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
           <div>
-            <h2 className="text-3xl font-bold text-gray-800">
-              Transport Dashboard
-            </h2>
-            <p className="text-gray-500 mt-1">
-              Monitor logistics, deliveries and fleet operations.
-            </p>
+            <h3 className="text-xl font-semibold text-gray-800">Recent Transits</h3>
+            <p className="text-sm text-gray-500 mt-1">Real-time status tracking logs across regional dispatch fields.</p>
           </div>
-
-          <button className="bg-black text-white px-5 py-3 rounded-xl font-medium shadow hover:opacity-90 transition">
-            + Create Trip
+          <button 
+            onClick={() => navigate('/trips')}
+            className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition text-sm font-medium"
+          >
+            View All Logs
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6 mb-8">
-          {stats.map((item, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm hover:shadow-md transition"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-3xl">{item.icon}</span>
-
-                <span className="text-sm font-semibold text-green-600">
-                  {item.change}
-                </span>
-              </div>
-
-              <h3 className="text-gray-500 text-sm">{item.title}</h3>
-
-              <p className="text-3xl font-bold text-gray-800 mt-2">
-                {item.value}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        {/* Trips Table */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-800">
-                Recent Trips
-              </h3>
-
-              <p className="text-sm text-gray-500 mt-1">
-                Latest transport and delivery activity
-              </p>
-            </div>
-
-            <button className="px-4 py-2 rounded-lg border border-gray-200 hover:bg-gray-100 transition text-sm font-medium">
-              View All
-            </button>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[700px]">
-              <thead className="bg-gray-50 text-left">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead className="bg-gray-50 text-left">
+              <tr>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Trip ID</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Assigned Vehicle</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Operator (Driver)</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Destination Yard</th>
+                <th className="px-6 py-4 text-sm font-semibold text-gray-600">Transit Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trips.length === 0 ? (
                 <tr>
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                    Trip ID
-                  </th>
-
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                    Vehicle
-                  </th>
-
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                    Driver
-                  </th>
-
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                    Destination
-                  </th>
-
-                  <th className="px-6 py-4 text-sm font-semibold text-gray-600">
-                    Status
-                  </th>
+                  <td colSpan="5" className="px-6 py-8 text-center text-sm text-slate-400">No active transport operations found in database registry.</td>
                 </tr>
-              </thead>
-
-              <tbody>
-                {trips.map((trip, index) => (
-                  <tr
-                    key={index}
-                    className="border-t border-gray-100 hover:bg-gray-50 transition"
-                  >
-                    <td className="px-6 py-4 font-medium text-gray-800">
-                      {trip.tripId}
-                    </td>
-
-                    <td className="px-6 py-4 text-gray-600">
-                      {trip.vehicle}
-                    </td>
-
-                    <td className="px-6 py-4 text-gray-600">
-                      {trip.driver}
-                    </td>
-
-                    <td className="px-6 py-4 text-gray-600">
-                      {trip.destination}
-                    </td>
-
+              ) : (
+                trips.map((trip, index) => (
+                  <tr key={index} className="border-t border-gray-100 hover:bg-gray-50 transition">
+                    <td className="px-6 py-4 font-medium text-gray-800">{trip.tripId || `TRIP-${trip._id.substring(18)}`}</td>
+                    <td className="px-6 py-4 text-gray-600">{trip.vehicleId?.vehicleNumber || 'Unassigned'}</td>
+                    <td className="px-6 py-4 text-gray-600">{trip.driverId?.fullName || 'Unassigned'}</td>
+                    <td className="px-6 py-4 text-gray-600">{trip.destination}</td>
                     <td className="px-6 py-4">
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusStyle(
-                          trip.status
-                        )}`}
-                      >
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${getStatusStyle(trip.status)}`}>
                         {trip.status}
                       </span>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

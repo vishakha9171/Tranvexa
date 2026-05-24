@@ -19,15 +19,14 @@ export default function Dashboard() {
         const [vehiclesRes, tripsRes, driversRes] = await Promise.all([
           API.get('/vehicles'),
           API.get('/trips'),
-          API.get('/drivers'),
-          API.get('/orders/pending')
+          API.get('/drivers')
         ]);
 
         const allVehicles = vehiclesRes.data.data || [];
         const allTrips = tripsRes.data.data || [];
         const allDrivers = driversRes.data.data || [];
 
-        setTrips(allTrips.slice(0, 5)); // Show the 5 most recent transits
+        setTrips(allTrips.slice(0, 5)); 
         
         setMetrics({
           totalVehicles: allVehicles.length,
