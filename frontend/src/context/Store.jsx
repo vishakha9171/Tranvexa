@@ -1,13 +1,12 @@
-import  { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect } from 'react';
 import API from '../services/api';
 
-const StoreContext = createContext(null);
+export const Store = createContext(null);
 
 export function StoreProvider({ children }) {
   const [vehicles, setVehicles] = useState([]);
   const [drivers, setDrivers] = useState([]);
   const [trips, setTrips] = useState([]);
-  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [metrics, setMetrics] = useState({
     totalVehicles: 0,
@@ -18,23 +17,19 @@ export function StoreProvider({ children }) {
 
   const refreshGlobalData = async () => {
     try {
-      setLoading(true);
-      const [vehiclesRes, tripsRes, driversRes, ordersRes] = await Promise.all([
+      const [vehiclesRes, tripsRes, driversRes] = await Promise.all([
         API.get('/vehicles'),
         API.get('/trips'),
-        API.get('/drivers'),
-        API.get('/orders/pending').catch(() => ({ data: { data: [] } }))
+        API.get('/drivers')
       ]);
 
-      const allVehicles = vehiclesRes.data.data || [];
-      const allTrips = tripsRes.data.data || [];
-      const allDrivers = driversRes.data.data || [];
-      const allOrders = ordersRes.data.data || [];
+      const allVehicles = vehiclesRes.data?.data || [];
+      const allTrips = tripsRes.data?.data || [];
+      const allDrivers = driversRes.data?.data || [];
 
       setVehicles(allVehicles);
       setTrips(allTrips);
       setDrivers(allDrivers);
-      setOrders(allOrders);
 
       setMetrics({
         totalVehicles: allVehicles.length,
@@ -50,14 +45,18 @@ export function StoreProvider({ children }) {
   };
 
   useEffect(() => {
-    refreshGlobalData();
+    const initializeDataPipeline = async () => {
+      setLoading(true);
+      await refreshGlobalData();
+    };
+    initializeDataPipeline();
   }, []);
 
   const dispatchTrip = async (payload) => {
     try {
       const response = await API.post('/trips', payload);
       await refreshGlobalData();
-      return { success: true, data: response.data.data };
+      return { success: true, data: response.data?.data };
     } catch (error) {
       return { 
         success: false, 
@@ -84,7 +83,6 @@ export function StoreProvider({ children }) {
       vehicles,
       drivers,
       trips,
-      orders,
       metrics,
       loading,
       refreshGlobalData,
@@ -94,12 +92,4 @@ export function StoreProvider({ children }) {
       {children}
     </StoreContext.Provider>
   );
-}
-
-export function useStore() {
-  const context = useContext(StoreContext);
-  if (!context) {
-    throw new Error("useStore must be utilized within a StoreProvider layer");
-  }
-  return context;
 }
