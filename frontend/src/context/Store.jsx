@@ -1,7 +1,7 @@
 import { createContext, useState, useEffect } from 'react';
 import API from '../services/api';
 
-export const Store = createContext(null);
+export const StoreContext = createContext(null);
 
 export function StoreProvider({ children }) {
   const [vehicles, setVehicles] = useState([]);
