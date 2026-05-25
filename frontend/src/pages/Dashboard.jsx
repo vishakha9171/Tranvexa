@@ -1,8 +1,10 @@
 import  { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import API from '../services/api';
+import { useStore } from '../hooks/useStore';
 
 export default function Dashboard() {
+  const { trips, metrics, loading } = useStore();
   const navigate = useNavigate();
   const [trips, setTrips] = useState([]);
   const [metrics, setMetrics] = useState({
@@ -12,6 +14,7 @@ export default function Dashboard() {
     driversAvailable: 0
   });
   const [loading, setLoading] = useState(true);
+
 
   useEffect(() => {
     const fetchDashboardData = async () => {
