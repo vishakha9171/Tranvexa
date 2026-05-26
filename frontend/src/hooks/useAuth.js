@@ -8,7 +8,7 @@ function useAuth() {
   useEffect(()=>{
     const client=new Keycloak({
      url:import.meta.env.VITE_KEYCLOAK_URL,
-     userId:import.meta.env.VITE_KEYCLOAK_REALM,
+     realm:import.meta.env.VITE_KEYCLOAK_REALM,
      clientId:import.meta.env.VITE_KEYCLOAK_CLIENT
     })
     client.init({
